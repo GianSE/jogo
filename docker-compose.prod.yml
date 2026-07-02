@@ -1,0 +1,56 @@
+# Production deployment.
+#
+# Prerequisites:
+#   1. Build the frontend: cd frontend && npm run build  (outputs to frontend/dist/)
+#   2. Copy dist into the frontend_dist volume (or mount the host path directly)
+#   3. Place TLS cert/key at  infra/ssl/cert.pem  and  infra/ssl/key.pem
+#   4. Create a .env.prod file with: DB_PASSWORD, JWT_SECRET, ALLOWED_ORIGIN
+#      Example: ALLOWED_ORIGIN=https://casinha.example.com
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./infra/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./infra/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: casinha
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: casinha
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U casinha -d casinha"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      APP_ENV: production
+      PORT: "8080"
+      DATABASE_URL: postgres://casinha:${DB_PASSWORD}@postgres:5432/casinha?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET}
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

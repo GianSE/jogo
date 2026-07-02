@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: casinha
+      POSTGRES_PASSWORD: casinha
+      POSTGRES_DB: casinha
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U casinha -d casinha"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      APP_ENV: development
+      PORT: "8080"
+      DATABASE_URL: postgres://casinha:casinha@postgres:5432/casinha?sslmode=disable
+      JWT_SECRET: dev-secret-change-me
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      # Separate named volume keeps node_modules inside Docker so the host
+      # directory (which has none) never shadows the installed packages.
+      - frontend_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE: http://localhost:8080
+    # npm install is fast on repeat starts because the named volume persists.
+    command: sh -c "npm install --no-audit --no-fund && npm run dev"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  frontend_modules:

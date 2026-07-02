@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Maskable icon: content kept within the inner 80% safe zone -->
+  <rect width="100" height="100" fill="#1b1726"/>
+  <!-- roof (shifted in to respect safe zone) -->
+  <polygon points="50,18 18,50 28,50 28,84 72,84 72,50 82,50" fill="#e8a0bf"/>
+  <!-- door -->
+  <rect x="38" y="62" width="24" height="22" fill="#2a2438"/>
+  <!-- door knob -->
+  <circle cx="59" cy="73" r="2.2" fill="#e8a0bf"/>
+</svg>
